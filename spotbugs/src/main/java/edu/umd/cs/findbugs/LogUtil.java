@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,9 +41,12 @@ public class LogUtil {
 
     public static Path getLogFilePath(String name) throws IOException {
         String projectName = name;
-        Path logFolderPath = Paths.get(System.getProperty("java.io.tmpdir", "/tmp"), "spot-bugs-logs");
+        Path logFolderPath = Paths.get(Paths.get("").toAbsolutePath().toString(), ".spotbugs-logs");
         if (!Files.exists(logFolderPath)) {
             Files.createDirectories(logFolderPath);
+        }
+        if (Files.exists(Paths.get(logFolderPath.toString(), "nolog"))) {
+            return null;
         }
         return Paths.get(logFolderPath.toString(), projectName.replaceAll(" ", "-"));
     }
@@ -55,13 +59,16 @@ public class LogUtil {
         try {
             if (!writerMap.containsKey(key)) {
                 Path path = getLogFilePath(name);
+                if (null == path) {
+                    return;
+                }
                 if (!writerMap.containsKey(key)) {
                     OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(path.toFile()));
                     writerMap.put(key, writer);
                 }
             }
-//            writerMap.get(key).append(new Date().toString()).append(" ").append(key)
-//                .append(" : ").append(content).append('\n');
+            writerMap.get(key).append(new Date().toString()).append(" ").append(key)
+                .append(" : ").append(content).append('\n');
         } catch (IOException ex) {
             ex.printStackTrace();
         }

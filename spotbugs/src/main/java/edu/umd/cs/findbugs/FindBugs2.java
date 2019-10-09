@@ -947,9 +947,10 @@ public class FindBugs2 implements IFindBugsEngine, AutoCloseable {
     }
 
     private List<String> getExclusiveClassNames() throws IOException {
-        String rootFolder = System.getProperty("java.io.tmpdir", "/tmp");
-        Path configFile = Paths.get(rootFolder, "spotbugs.exclusive");
+        String rootFolder = Paths.get("").toAbsolutePath().toString();
+        Path configFile = Paths.get(rootFolder, ".spotbugs.exclusive");
         LogUtil.log(getProjectName(), "准备读取文件：" + configFile.toString());
+        LogUtil.log(getProjectName(), "当前路径：" + Paths.get("").toAbsolutePath().toString());
         if (Files.exists(configFile)) {
             try (InputStream inputStream = new FileInputStream(configFile.toFile())) {
                 byte[] bytes = new byte[10240];
