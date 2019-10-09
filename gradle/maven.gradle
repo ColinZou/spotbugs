@@ -6,10 +6,10 @@ ext.isReleaseVersion = !version.endsWith("SNAPSHOT") && /* for Eclipse plugin */
 publishing {
   repositories {
     maven {
-      url isReleaseVersion ? "https://oss.sonatype.org/service/local/staging/deploy/maven2/" : "https://oss.sonatype.org/content/repositories/snapshots/"
+      url isReleaseVersion ? "https://oss.sonatype.org/service/local/staging/deploy/maven2/" : "http://dev-base-maven.canguanwuyou.com/repository/snapshots/"
       credentials {
-        username = project.hasProperty('ossrhUsername') ? ossrhUsername : "Unknown user"
-        password = project.hasProperty('ossrhPassword') ? ossrhPassword : "Unknown password"
+        username = project.hasProperty('ossrhUsername') ? ossrhUsername : "unknown"
+        password = project.hasProperty('ossrhPassword') ? ossrhPassword : "unknown"
       }
     }
   }
