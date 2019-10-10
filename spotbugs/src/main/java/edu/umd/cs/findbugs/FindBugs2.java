@@ -200,55 +200,55 @@ public class FindBugs2 implements IFindBugsEngine, AutoCloseable {
             try {
 
                 // Get the class factory for creating classpath/codebase/etc.
-                LogUtil.log(getProjectName(), "开始处理");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "开始处理");
                 classFactory = ClassFactory.instance();
 
                 // The class path object
                 createClassPath();
 
-                LogUtil.log(getProjectName(), "001. 完成 createClassPath");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "001. 完成 createClassPath");
 
                 progressReporter.reportNumberOfArchives(project.getFileCount() + project.getNumAuxClasspathEntries());
-                LogUtil.log(getProjectName(), "002. 完成 progressReporter.reportNumberOfArchives");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "002. 完成 progressReporter.reportNumberOfArchives");
                 profiler.start(this.getClass());
-                LogUtil.log(getProjectName(), "002.1 完成 profiler.start(this.getClass())");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "002.1 完成 profiler.start(this.getClass())");
 
                 // The analysis cache object
                 createAnalysisCache();
-                LogUtil.log(getProjectName(), "003. 完成 createAnalysisCache");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "003. 完成 createAnalysisCache");
 
                 // Create BCEL compatibility layer
                 createAnalysisContext(project, appClassList, analysisOptions.sourceInfoFileName);
-                LogUtil.log(getProjectName(), "004. 完成 createAnalysisContext");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "004. 完成 createAnalysisContext");
                 // Discover all codebases in classpath and
                 // enumerate all classes (application and non-application)
                 buildClassPath();
-                LogUtil.log(getProjectName(), "005. 完成 buildClassPath");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "005. 完成 buildClassPath");
 
                 // Build set of classes referenced by application classes
                 buildReferencedClassSet();
-                LogUtil.log(getProjectName(), "006. 完成 buildReferencedClassSet");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "006. 完成 buildReferencedClassSet");
 
                 // Create BCEL compatibility layer
                 setAppClassList(appClassList);
-                LogUtil.log(getProjectName(), "007. 完成 setAppClassList");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "007. 完成 setAppClassList");
 
                 // Configure the BugCollection (if we are generating one)
                 FindBugs.configureBugCollection(this);
-                LogUtil.log(getProjectName(), "008. 完成 FindBugs.configureBugCollection");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "008. 完成 FindBugs.configureBugCollection");
                 // Enable/disabled relaxed reporting mode
                 FindBugsAnalysisFeatures.setRelaxedMode(analysisOptions.relaxedReportingMode);
                 FindBugsDisplayFeatures.setAbridgedMessages(analysisOptions.abridgedMessages);
 
                 // Configure training databases
                 FindBugs.configureTrainingDatabases(this);
-                LogUtil.log(getProjectName(), "009. 完成 FindBugs.configureTrainingDatabases");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "009. 完成 FindBugs.configureTrainingDatabases");
                 // Configure analysis features
                 configureAnalysisFeatures();
-                LogUtil.log(getProjectName(), "010. 完成 configureAnalysisFeatures");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "010. 完成 configureAnalysisFeatures");
                 // Create the execution plan (which passes/detectors to execute)
                 createExecutionPlan();
-                LogUtil.log(getProjectName(), "011. 完成 createExecutionPlan");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "011. 完成 createExecutionPlan");
                 for (Plugin p : detectorFactoryCollection.plugins()) {
                     for (ComponentPlugin<BugReporterDecorator> brp : p.getComponentPlugins(BugReporterDecorator.class)) {
                         if (brp.isEnabledByDefault() && !brp.isNamed(explicitlyDisabledBugReporterDecorators)
@@ -286,10 +286,10 @@ public class FindBugs2 implements IFindBugsEngine, AutoCloseable {
                         throw new NoClassesFoundToAnalyzeException(classPath);
                     }
                 }
-                LogUtil.log(getProjectName(), "012. BEFORE 执行 analyzeApplication");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "012. BEFORE 执行 analyzeApplication");
                 // Analyze the application
                 analyzeApplication();
-                LogUtil.log(getProjectName(), "013. AFTER 执行 analyzeApplication");
+                LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "013. AFTER 执行 analyzeApplication");
             } catch (CheckedAnalysisException e) {
                 IOException ioe = new IOException("IOException while scanning codebases");
                 ioe.initCause(e);
@@ -949,16 +949,18 @@ public class FindBugs2 implements IFindBugsEngine, AutoCloseable {
     private List<String> getExclusiveClassNames() throws IOException {
         String rootFolder = Paths.get("").toAbsolutePath().toString();
         Path configFile = Paths.get(rootFolder, ".spotbugs.exclusive");
-        LogUtil.log(getProjectName(), "准备读取文件：" + configFile.toString());
-        LogUtil.log(getProjectName(), "当前路径：" + Paths.get("").toAbsolutePath().toString());
+        LogUtil.log(LogUtil.LogLevel.INFO, getProjectName(), "准备读取文件：" + configFile.toString());
         if (Files.exists(configFile)) {
             try (InputStream inputStream = new FileInputStream(configFile.toFile())) {
-                byte[] bytes = new byte[10240];
-                inputStream.read(bytes);
+                byte[] bytes = new byte[10240 * 5];
+                int byteCount = inputStream.read(bytes);
+                if (0 == byteCount) {
+                    return Collections.emptyList();
+                }
                 String content = new String(bytes, StandardCharsets.UTF_8);
-                LogUtil.log(getProjectName(), "只需要检查如下class : " + content);
+                LogUtil.log(LogUtil.LogLevel.INFO, getProjectName(), "只需要检查如下class : " + content);
                 if (content.trim().length() > 0) {
-                    return Arrays.asList(content.trim().replaceAll("\n", ",").split(","));
+                    return Arrays.asList(content.trim().replaceAll("\\.", "/").replaceAll("\n", ",").split(","));
                 }
             }
 
@@ -978,7 +980,7 @@ public class FindBugs2 implements IFindBugsEngine, AutoCloseable {
         try {
             checkTheseClassNamesOnly = getExclusiveClassNames();
         } catch (IOException ex) {
-            LogUtil.log(getProjectName(), "读取配置文件失败" + ex.getMessage());
+            LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "读取配置文件失败" + ex.getMessage());
             checkTheseClassNamesOnly = Collections.emptyList();
         }
         try {
@@ -998,7 +1000,12 @@ public class FindBugs2 implements IFindBugsEngine, AutoCloseable {
                 try {
                     if (!checkTheseClassNamesOnly.isEmpty() &&
                         !checkTheseClassNamesOnly.contains(desc.getClassName())) {
+                        LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "根据规则，忽略检查：" + desc.getClassName());
                         continue;
+                    }
+                    if (!checkTheseClassNamesOnly.isEmpty() &&
+                        checkTheseClassNamesOnly.contains(desc.getClassName())) {
+                        LogUtil.log(LogUtil.LogLevel.INFO, getProjectName(), "根据规则，准备检查：" + desc.getClassName());
                     }
                     XClass info = Global.getAnalysisCache().getClassAnalysis(XClass.class, desc);
                     factory.intern(info);
@@ -1041,7 +1048,17 @@ public class FindBugs2 implements IFindBugsEngine, AutoCloseable {
                     }
                 }
                 if (!isNonReportingFirstPass) {
+                    final List<String> exclusiveClassNameList = checkTheseClassNamesOnly;
                     OutEdges<ClassDescriptor> outEdges = e -> {
+                        if (!exclusiveClassNameList.isEmpty() &&
+                            !exclusiveClassNameList.contains(e.getClassName())) {
+                            LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "根据规则，忽略检查：" + e.getClassName());
+                            return Collections.emptyList();
+                        }
+                        if (!exclusiveClassNameList.isEmpty() &&
+                            exclusiveClassNameList.contains(e.getClassName())) {
+                            LogUtil.log(LogUtil.LogLevel.INFO, getProjectName(), "根据规则，准备检查：" + e.getClassName());
+                        }
                         try {
                             XClass classNameAndInfo = Global.getAnalysisCache().getClassAnalysis(XClass.class, e);
                             return classNameAndInfo.getCalledClassDescriptors();
@@ -1070,7 +1087,12 @@ public class FindBugs2 implements IFindBugsEngine, AutoCloseable {
                 for (ClassDescriptor classDescriptor : classCollection) {
                     if (!checkTheseClassNamesOnly.isEmpty() &&
                         !checkTheseClassNamesOnly.contains(classDescriptor.getClassName())) {
+                        LogUtil.log(LogUtil.LogLevel.DEBUG, getProjectName(), "根据规则，忽略检查：" + classDescriptor.getClassName());
                         continue;
+                    }
+                    if (!checkTheseClassNamesOnly.isEmpty() &&
+                        checkTheseClassNamesOnly.contains(classDescriptor.getClassName())) {
+                        LogUtil.log(LogUtil.LogLevel.INFO, getProjectName(), "根据规则，准备检查：" + classDescriptor.getClassName());
                     }
                     long classStartNanoTime = 0;
                     if (PROGRESS) {

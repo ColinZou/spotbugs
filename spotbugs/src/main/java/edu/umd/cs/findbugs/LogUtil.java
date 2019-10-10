@@ -9,13 +9,32 @@ import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * @author colin
  */
 public class LogUtil {
+
     private static Map<String, OutputStreamWriter> writerMap = new ConcurrentHashMap<>();
-    private static final String defaultLogFile = "spot-bugs";
+    private static final String defaultLogFile = "spotbugs";
+    private static final LogLevel DEFAULT_LOG_LEVEL;
+
+    public enum LogLevel {
+        DEBUG(0),
+        INFO(1),
+        WARN(2),
+        ERROR(3);
+        private final int level;
+
+        private LogLevel(int level) {
+            this.level = level;
+        }
+
+        public int getValue() {
+            return this.level;
+        }
+    }
 
     static {
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -30,6 +49,12 @@ public class LogUtil {
                 });
             }
         });
+        final String logLevelEnv = System.getenv("LOG_LEVEL");
+        String levelStr = Stream.of(LogLevel.values())
+            .map(Enum::name)
+            .filter(i -> i.equalsIgnoreCase(logLevelEnv))
+            .findAny().orElse("INFO");
+        DEFAULT_LOG_LEVEL = LogLevel.valueOf(levelStr);
     }
 
     public static String getProjectName(String name) {
@@ -51,7 +76,10 @@ public class LogUtil {
         return Paths.get(logFolderPath.toString(), projectName.replaceAll(" ", "-"));
     }
 
-    public synchronized static void log(String name, String content) {
+    public synchronized static void log(LogLevel level, String name, String content) {
+        if (level.level < DEFAULT_LOG_LEVEL.level) {
+            return;
+        }
         String key = getProjectName(name);
         if (null == key) {
             return;
@@ -68,9 +96,13 @@ public class LogUtil {
                 }
             }
             writerMap.get(key).append(new Date().toString()).append(" ").append(key)
-                .append(" : ").append(content).append('\n');
+                .append(" ").append(level.name()).append(" ").append(content).append('\n');
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    public synchronized static void log(String name, String content) {
+        log(LogLevel.INFO, name, content);
     }
 }
